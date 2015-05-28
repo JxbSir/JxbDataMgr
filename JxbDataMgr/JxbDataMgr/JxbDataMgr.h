@@ -16,8 +16,12 @@
 - (id)initWithClassDictionary:(Class)c dictionary:(NSDictionary *)dictionary;
 @end
 
-@interface JxbDataMgr : NSObject
 
+
+@interface JxbDataMgr : NSObject
+{
+    NSOperationQueue *opQueue;
+}
 /**
  *  初始化单例
  *
@@ -34,7 +38,7 @@
  *
  *  @return 是否成功
  */
-- (BOOL)insertOrUpdateData:(NSString*)tableName PrimaryKey:(NSString*)primaryKey arrItems:(NSArray*)arrItems;
+- (void)insertOrUpdateData:(NSString*)tableName PrimaryKey:(NSString*)primaryKey arrItems:(NSArray*)arrItems block:(id)block;
 
 /**
  *  查询数据（通过主键）
@@ -44,7 +48,7 @@
  *
  *  @return 数据列表
  */
-- (NSDictionary*)queryData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue;
+- (void)queryData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(id)block;
 
 /**
  *  删除数据
@@ -54,7 +58,7 @@
  *
  *  @return 是否成功
  */
-- (BOOL)deleteData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue;
+- (void)deleteData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(id)block;
 
 /**
  *  清空数据
@@ -63,5 +67,5 @@
  *
  *  @return 是否成功
  */
-- (BOOL)dropData:(NSString*)tableName;
+- (void)dropData:(NSString*)tableName block:(id)block;
 @end

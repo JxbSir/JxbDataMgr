@@ -38,12 +38,15 @@
 //    model3.test2 = @"8";
 //    model3.test3 = @"9";
 //    
-//    BOOL b = [[JxbDataMgr sharedInstance] insertOrUpdateData:@"testmodel" PrimaryKey:@"test1" arrItems:@[model,model2,model3]];
-//    NSLog(@"%@",b?@"y":@"n");
+//    [[JxbDataMgr sharedInstance] insertOrUpdateData:@"testmodel" PrimaryKey:@"test1" arrItems:@[model,model2,model3] block:^(NSObject* result){
+//        NSLog(@"%@",result);
+//    }];
     
-//    NSDictionary* dic = [[JxbDataMgr sharedInstance] queryData:@"testmodel" PrimaryValue:@""];
-//    JxbQueryResult* list = [[JxbQueryResult alloc] initWithClassDictionary:[TestModel class] dictionary:dic];
+    [[JxbDataMgr sharedInstance] queryData:@"testmodel" PrimaryValue:@"" block:^(NSObject* result){
+        JxbQueryResult* list = [[JxbQueryResult alloc] initWithClassDictionary:[TestModel class] dictionary:(NSDictionary*)result];
+        NSLog(@"%@",list);
+    }];
     
-    [[JxbDataMgr sharedInstance] deleteData:@"testmodel" PrimaryValue:@"7"];
+    //[[JxbDataMgr sharedInstance] deleteData:@"testmodel" PrimaryValue:@"7"];
 }
 @end
