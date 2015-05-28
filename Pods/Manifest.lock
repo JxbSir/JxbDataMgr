@@ -1,0 +1,13 @@
+PODS:
+  - jastor (0.2.1)
+  - TouchJSON (1.1)
+
+DEPENDENCIES:
+  - jastor
+  - TouchJSON
+
+SPEC CHECKSUMS:
+  jastor: fe9ff71f4b683698253d6a0d9a2561987fd9aff3
+  TouchJSON: 39be3595ebe489095311d97ce0c824417324cb74
+
+COCOAPODS: 0.35.0

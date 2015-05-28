@@ -1,0 +1,12 @@
+//
+//  PrefixHeader.pch
+//  JxbDataMgr
+//
+//  Created by Peter on 15/5/28.
+//  Copyright (c) 2015年 Peter. All rights reserved.
+//
+
+#import "CJSONSerializer.h"
+#import "CJSONDeserializer.h"
+#import "NSDictionary_JSONExtensions.h"
+#import "Jastor.h"
