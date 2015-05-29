@@ -2,8 +2,8 @@
 //  ViewController.m
 //  JxbDataMgr
 //
-//  Created by Peter on 15/5/28.
-//  Copyright (c) 2015年 Peter. All rights reserved.
+//  Created by Peter on https://github.com/JxbSir 15/5/28.
+//  Copyright (c) 2015年 Peter Jin   Mail:i@Jxb.name    All rights reserved.
 //
 
 #import "ViewController.h"
@@ -42,9 +42,24 @@
 //        NSLog(@"%@",result);
 //    }];
     
-    [[JxbDataMgr sharedInstance] queryData:@"testmodel" PrimaryValue:@"" block:^(NSObject* result){
-        JxbQueryResult* list = [[JxbQueryResult alloc] initWithClassDictionary:[TestModel class] dictionary:(NSDictionary*)result];
-        NSLog(@"%@",list);
+//    [[JxbDataMgr sharedInstance] queryData:@"testmodel" PrimaryValue:@"" block:^(NSObject* result){
+//        JxbQueryResult* list = [[JxbQueryResult alloc] initWithClassDictionary:[TestModel class] dictionary:(NSDictionary*)result];
+//        NSLog(@"%@",list);
+//    }];
+    
+//    JxbQueryCondition* c1 = [[JxbQueryCondition alloc] init];
+//    c1.fieldName = @"test1";
+//    c1.queryType = JxbDataQueryType_Equal;
+//    c1.valueEqual = @"4";
+    
+    JxbQueryCondition* c2 = [[JxbQueryCondition alloc] init];
+    c2.fieldName = @"test2";
+    c2.queryType = JxbDataQueryType_Section;
+    c2.valueLessthan = @"6";
+    c2.valueMorethan = @"9";
+//
+    [[JxbDataMgr sharedInstance] queryDataExt:@"testmodel" conditions:@[c2] block:^(NSObject* result){
+        
     }];
     
     //[[JxbDataMgr sharedInstance] deleteData:@"testmodel" PrimaryValue:@"7"];

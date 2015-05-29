@@ -2,8 +2,8 @@
 //  JxbDataMgr.m
 //  JxbDataMgr
 //
-//  Created by Peter on 15/5/28.
-//  Copyright (c) 2015年 Peter. All rights reserved.
+//  Created by Peter on https://github.com/JxbSir 15/5/28.
+//  Copyright (c) 2015年 Peter Jin   Mail:i@Jxb.name    All rights reserved.
 //
 
 
@@ -12,21 +12,23 @@
 #define dbName      @"JxbDataMgr"
 #define USERDEFAULT [NSUserDefaults standardUserDefaults]
 
-//TODO:通过随意字段查询
-
 typedef enum {
     JxbDataOpType_InsertUpdate,
     JxbDataOpType_Query,
+    JxbDataOpType_QueryExt,
     JxbDataOpType_Delete,
     JxbDataOpType_Drop
 }JxbDataOpType;
 
+
 typedef void (^JxbDataOpBlock) (NSObject* result);
 static Class rClass;
 
+#pragma mark - JxbDataModel
 @implementation JxbDataModel
 @end
 
+#pragma mark - JxbQueryResult
 @implementation JxbQueryResult
 - (id)initWithClassDictionary:(Class)c dictionary:(NSDictionary *)dictionary
 {
@@ -40,11 +42,18 @@ static Class rClass;
 }
 @end
 
+#pragma mark - JxbQueryCondition
+@implementation JxbQueryCondition
 
+@end
+
+
+#pragma mark - JxbDataMgrOperation
 @interface JxbDataMgrOperation : NSOperation
 @property(nonatomic,assign)JxbDataOpType   opType;
 @property(nonatomic,assign)JxbDataOpBlock  block;
 @property(nonatomic,copy)NSArray*   arrUpdateData;
+@property(nonatomic,copy)NSArray*   arrConditions;
 @property(nonatomic,copy)NSString*  tableName;
 @property(nonatomic,copy)NSString*  primaryKey;
 @property(nonatomic,copy)NSString*  primaryValue;
@@ -52,10 +61,16 @@ static Class rClass;
 
 @implementation JxbDataMgrOperation
 
+/**
+ *  queue main执行函数
+ */
 - (void)main {
     switch (_opType) {
         case JxbDataOpType_Query:
             [self _queryData];
+            break;
+        case JxbDataOpType_QueryExt:
+            [self _queryDataExt];
             break;
         case JxbDataOpType_InsertUpdate:
             [self _updateData];
@@ -69,7 +84,6 @@ static Class rClass;
         default:
             break;
     }
-    
 }
 
 /**
@@ -97,6 +111,58 @@ static Class rClass;
     }
     if(_block != NULL)
         _block(@{@"result":[dicData allValues]});
+}
+
+/**
+ *  自定义查询线程
+ */
+- (void)_queryDataExt {
+    NSMutableDictionary* dicTables = [USERDEFAULT objectForKey:dbName];
+    NSString* strDataJson = [dicTables objectForKey:_tableName];
+    NSError* error = nil;
+    NSMutableDictionary* dicData = strDataJson ? [NSMutableDictionary dictionaryWithDictionary:[[CJSONDeserializer deserializer] deserialize:[strDataJson dataUsingEncoding:NSUTF8StringEncoding] error:&error]] : nil;
+    if(error)
+    {
+        NSLog(@"JxbDataMgr deserializer error:%@",error);
+        if(_block != NULL)
+            _block(nil);
+    }
+    if (!dicData)
+        if(_block != NULL)
+            _block(nil);
+    
+    NSMutableArray* arrResult = [NSMutableArray array];
+    for (NSDictionary* item in [dicData allValues]) {
+        BOOL bBelong = YES;
+        for (JxbQueryCondition* condition in _arrConditions) {
+            switch (condition.queryType) {
+                case JxbDataQueryType_Equal:
+                    if(![[item objectForKey:condition.fieldName] isEqualToString:condition.valueEqual])
+                        bBelong = NO;
+                    break;
+                case JxbDataQueryType_MoreThan:
+                    if(![[item objectForKey:condition.fieldName] doubleValue] > [condition.valueMorethan doubleValue])
+                        bBelong = NO;
+                    break;
+                case JxbDataQueryType_LessThan:
+                    if(![[item objectForKey:condition.fieldName] doubleValue] < [condition.valueLessthan doubleValue])
+                        bBelong = NO;
+                    break;
+                case JxbDataQueryType_Section:
+                    if([[item objectForKey:condition.fieldName] doubleValue] < [condition.valueLessthan doubleValue] || [[item objectForKey:condition.fieldName] doubleValue] > [condition.valueMorethan doubleValue])
+                        bBelong = NO;
+                    break;
+                default:
+                    break;
+            }
+            if(!bBelong)
+                break;
+        }
+        if(bBelong)
+            [arrResult addObject:item];
+    }
+    if(_block != NULL)
+        _block(@{@"result":arrResult});
 }
 
 /**
@@ -192,6 +258,7 @@ static Class rClass;
 }
 @end
 
+#pragma mark - JxbDataMgr
 @implementation JxbDataMgr
 
 /**
@@ -218,13 +285,14 @@ static Class rClass;
     return self;
 }
 
+#pragma mark - db operation
 /**
  *  查询数据（通过主键）
  *
  *  @param tableName    表名
  *  @param PrimaryValue 主键value
  *
- *  @return 数据列表
+ *  @return
  */
 - (void)queryData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(id)block {
     JxbDataMgrOperation* op = [[JxbDataMgrOperation alloc] init];
@@ -236,13 +304,29 @@ static Class rClass;
 }
 
 /**
+ *  查询数据（自定义字段）
+ *
+ *  @param tableName  表名
+ *  @param conditions 条件（JxbQueryCondition的数组）
+ *  @param block      回调
+ */
+- (void)queryDataExt:(NSString*)tableName conditions:(NSArray*)conditions block:(id)block {
+    JxbDataMgrOperation* op = [[JxbDataMgrOperation alloc] init];
+    op.opType = JxbDataOpType_QueryExt;
+    op.tableName = tableName;
+    op.arrConditions = conditions;
+    op.block = block;
+    [opQueue addOperation:op];
+}
+
+/**
  *  插入或者更新数据
  *
  *  @param tableName  表名
  *  @param primaryKey 主键（model的属性名称）
  *  @param arrItems   数据（model必须继承JxbDataModel）
  *
- *  @return 是否成功
+ *  @return
  */
 - (void)insertOrUpdateData:(NSString*)tableName PrimaryKey:(NSString*)primaryKey arrItems:(NSArray*)arrItems block:(id)block {
     JxbDataMgrOperation* op = [[JxbDataMgrOperation alloc] init];
@@ -260,7 +344,7 @@ static Class rClass;
  *  @param tableName    表名
  *  @param PrimaryValue 主键value
  *
- *  @return 是否成功
+ *  @return
  */
 - (void)deleteData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(id)block {
     JxbDataMgrOperation* op = [[JxbDataMgrOperation alloc] init];
@@ -269,9 +353,6 @@ static Class rClass;
     op.primaryValue = PrimaryValue;
     op.block = block;
     [opQueue addOperation:op];
-    
-    
-    
 }
 
 /**
@@ -279,7 +360,7 @@ static Class rClass;
  *
  *  @param tableName    表名
  *
- *  @return 是否成功
+ *  @return
  */
 - (void)dropData:(NSString*)tableName block:(id)block {
     JxbDataMgrOperation* op = [[JxbDataMgrOperation alloc] init];
