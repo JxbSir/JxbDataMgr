@@ -11,4 +11,5 @@ Pod::Spec.new do |s|
   s.source_files = "JxbDataMgr/JxbDataMgr/*.{h,m}"
   s.public_header_files = 'JxbDataMgr/JxbDataMgr/JxbDataMgr.h'
   s.frameworks   = 'UIKit'
+  s.dependency   'jastor'
 end
