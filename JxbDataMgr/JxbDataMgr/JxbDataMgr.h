@@ -7,6 +7,10 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "CJSONSerializer.h"
+#import "CJSONDeserializer.h"
+#import "NSDictionary_JSONExtensions.h"
+#import "Jastor.h"
 
 typedef enum {
     JxbDataQueryType_Equal,
