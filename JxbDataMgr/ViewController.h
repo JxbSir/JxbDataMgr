@@ -10,9 +10,9 @@
 #import "JxbDataMgr.h"
 
 @interface TestModel : JxbDataModel
-@property(nonatomic,copy)NSString* test1;
-@property(nonatomic,copy)NSString* test2;
-@property(nonatomic,copy)NSString* test3;
+@property(nonatomic,copy)NSString* name;
+@property(nonatomic,copy)NSString* nick;
+@property(nonatomic,copy)NSString* qq;
 @end
 
 @interface ViewController : UIViewController

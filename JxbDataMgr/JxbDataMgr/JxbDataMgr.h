@@ -12,6 +12,12 @@
 #import "NSDictionary_JSONExtensions.h"
 #import "Jastor.h"
 
+
+typedef void (^JxbDataOpBlock) (NSObject* result);
+
+/**
+ 查询类别
+ */
 typedef enum {
     JxbDataQueryType_Equal,
     JxbDataQueryType_MoreThan,
@@ -19,14 +25,23 @@ typedef enum {
     JxbDataQueryType_Section
 }JxbDataQueryType;
 
+/**
+ *  虚拟表类，insert or update 的model 需继承此类
+ */
 @interface JxbDataModel : Jastor
 @end
 
+/**
+ *  查询结果类
+ */
 @interface JxbQueryResult : Jastor
 @property(nonatomic,strong)NSArray* result;
 - (id)initWithClassDictionary:(Class)c dictionary:(NSDictionary *)dictionary;
 @end
 
+/**
+ *  查询条件设置
+ */
 @interface JxbQueryCondition : NSObject
 @property(nonatomic,assign)JxbDataQueryType     queryType;
 @property(nonatomic,copy)NSString               *fieldName;
@@ -58,7 +73,7 @@ typedef enum {
  *
  *  @return
  */
-- (void)insertOrUpdateData:(NSString*)tableName PrimaryKey:(NSString*)primaryKey arrItems:(NSArray*)arrItems block:(id)block;
+- (void)insertOrUpdateData:(NSString*)tableName PrimaryKey:(NSString*)primaryKey arrItems:(NSArray*)arrItems block:(JxbDataOpBlock)block;
 
 /**
  *  查询数据（通过主键）
@@ -69,7 +84,7 @@ typedef enum {
  *
  *  @return
  */
-- (void)queryData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(id)block;
+- (void)queryData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(JxbDataOpBlock)block;
 
 /**
  *  查询数据（自定义字段）
@@ -78,7 +93,7 @@ typedef enum {
  *  @param conditions 条件（JxbQueryCondition的数组）
  *  @param block      回调
  */
-- (void)queryDataExt:(NSString*)tableName conditions:(NSArray*)conditions block:(id)block;
+- (void)queryDataExt:(NSString*)tableName conditions:(NSArray*)conditions block:(JxbDataOpBlock)block;
 
 /**
  *  删除数据
@@ -89,7 +104,7 @@ typedef enum {
  *
  *  @return
  */
-- (void)deleteData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(id)block;
+- (void)deleteData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(JxbDataOpBlock)block;
 
 /**
  *  清空数据
@@ -99,5 +114,5 @@ typedef enum {
  *
  *  @return
  */
-- (void)dropData:(NSString*)tableName block:(id)block;
+- (void)dropData:(NSString*)tableName block:(JxbDataOpBlock)block;
 @end

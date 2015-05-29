@@ -20,8 +20,6 @@ typedef enum {
     JxbDataOpType_Drop
 }JxbDataOpType;
 
-
-typedef void (^JxbDataOpBlock) (NSObject* result);
 static Class rClass;
 
 #pragma mark - JxbDataModel
@@ -51,7 +49,7 @@ static Class rClass;
 #pragma mark - JxbDataMgrOperation
 @interface JxbDataMgrOperation : NSOperation
 @property(nonatomic,assign)JxbDataOpType   opType;
-@property(nonatomic,assign)JxbDataOpBlock  block;
+@property(nonatomic,strong)JxbDataOpBlock  block;
 @property(nonatomic,copy)NSArray*   arrUpdateData;
 @property(nonatomic,copy)NSArray*   arrConditions;
 @property(nonatomic,copy)NSString*  tableName;
@@ -92,44 +90,57 @@ static Class rClass;
 - (void)_queryData {
     NSMutableDictionary* dicTables = [USERDEFAULT objectForKey:dbName];
     NSString* strDataJson = [dicTables objectForKey:_tableName];
+    if(!strDataJson || strDataJson.length == 0)
+    {
+        [self useBlock:nil];
+        return;
+    }
     NSError* error = nil;
-    NSMutableDictionary* dicData = strDataJson ? [NSMutableDictionary dictionaryWithDictionary:[[CJSONDeserializer deserializer] deserialize:[strDataJson dataUsingEncoding:NSUTF8StringEncoding] error:&error]] : nil;
+    NSMutableDictionary* dicData = (strDataJson && strDataJson.length > 0)  ? [NSMutableDictionary dictionaryWithDictionary:[[CJSONDeserializer deserializer] deserialize:[strDataJson dataUsingEncoding:NSUTF8StringEncoding] error:&error]] : nil;
     if(error)
     {
         NSLog(@"JxbDataMgr deserializer error:%@",error);
-        if(_block != NULL)
-            _block(nil);
+        [self useBlock:nil];
+        return;
     }
     if (!dicData)
-        if(_block != NULL)
-            _block(nil);
+    {
+        [self useBlock:nil];
+        return;
+    }
     if (_primaryValue && _primaryValue.length > 0)
     {
         dicData = [dicData objectForKey:_primaryValue];
-        if(_block != NULL)
-            _block(@{@"result":dicData});
+        [self useBlock:@{@"result":dicData}];
+        return;
     }
-    if(_block != NULL)
-        _block(@{@"result":[dicData allValues]});
+    [self useBlock:@{@"result":[dicData allValues]}];
 }
 
 /**
  *  自定义查询线程
  */
 - (void)_queryDataExt {
-    NSMutableDictionary* dicTables = [USERDEFAULT objectForKey:dbName];
+    NSMutableDictionary* dicTables = [[USERDEFAULT objectForKey:dbName] mutableCopy];
     NSString* strDataJson = [dicTables objectForKey:_tableName];
+    if(!strDataJson || strDataJson.length == 0)
+    {
+        [self useBlock:nil];
+        return;
+    }
     NSError* error = nil;
-    NSMutableDictionary* dicData = strDataJson ? [NSMutableDictionary dictionaryWithDictionary:[[CJSONDeserializer deserializer] deserialize:[strDataJson dataUsingEncoding:NSUTF8StringEncoding] error:&error]] : nil;
+    NSMutableDictionary* dicData = (strDataJson && strDataJson.length > 0)  ? [NSMutableDictionary dictionaryWithDictionary:[[CJSONDeserializer deserializer] deserialize:[strDataJson dataUsingEncoding:NSUTF8StringEncoding] error:&error]] : nil;
     if(error)
     {
         NSLog(@"JxbDataMgr deserializer error:%@",error);
-        if(_block != NULL)
-            _block(nil);
+        [self useBlock:nil];
+        return;
     }
     if (!dicData)
-        if(_block != NULL)
-            _block(nil);
+    {
+        [self useBlock:nil];
+        return;
+    }
     
     NSMutableArray* arrResult = [NSMutableArray array];
     for (NSDictionary* item in [dicData allValues]) {
@@ -161,23 +172,22 @@ static Class rClass;
         if(bBelong)
             [arrResult addObject:item];
     }
-    if(_block != NULL)
-        _block(@{@"result":arrResult});
+    [self useBlock:@{@"result":arrResult}];
 }
 
 /**
  *  更新线程
  */
 - (void)_updateData {
-    NSMutableDictionary* dicTables = [USERDEFAULT objectForKey:dbName];
+    NSMutableDictionary* dicTables = [[USERDEFAULT objectForKey:dbName] mutableCopy];
     NSString* strDataJson = [dicTables objectForKey:_tableName];
     NSError* error = nil;
-    NSMutableDictionary* dicData = strDataJson ? [NSMutableDictionary dictionaryWithDictionary:[[CJSONDeserializer deserializer] deserialize:[strDataJson dataUsingEncoding:NSUTF8StringEncoding] error:&error]] : nil;
+    NSMutableDictionary* dicData = (strDataJson && strDataJson.length > 0) ? [NSMutableDictionary dictionaryWithDictionary:[[CJSONDeserializer deserializer] deserialize:[strDataJson dataUsingEncoding:NSUTF8StringEncoding] error:&error]] : nil;
     if(error)
     {
         NSLog(@"JxbDataMgr deserializer error:%@",error);
-        if(_block != NULL)
-            _block([NSNumber numberWithBool:NO]);
+        [self useBlock:[NSNumber numberWithBool:NO]];
+        return;
     }
     if(!dicData)
         dicData = [NSMutableDictionary dictionary];
@@ -199,8 +209,8 @@ static Class rClass;
     if(error)
     {
         NSLog(@"JxbDataMgr serializer error:%@",error);
-        if(_block != NULL)
-            _block([NSNumber numberWithBool:NO]);
+        [self useBlock:[NSNumber numberWithBool:NO]];
+        return;
     }
     NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
     if(!dicTables)
@@ -208,32 +218,33 @@ static Class rClass;
     [dicTables setObject:jsonString forKey:_tableName];
     [USERDEFAULT setObject:dicTables forKey:dbName];
     [USERDEFAULT synchronize];
-    if(_block != NULL)
-        _block([NSNumber numberWithBool:YES]);
+    [self useBlock:[NSNumber numberWithBool:YES]];
 }
 
 - (void)_deleteData {
-    NSMutableDictionary* dicTables = [USERDEFAULT objectForKey:dbName];
+    NSMutableDictionary* dicTables = [[USERDEFAULT objectForKey:dbName] mutableCopy];
     NSString* strDataJson = [dicTables objectForKey:_tableName];
     NSError* error = nil;
-    NSMutableDictionary* dicData = strDataJson ? [NSMutableDictionary dictionaryWithDictionary:[[CJSONDeserializer deserializer] deserialize:[strDataJson dataUsingEncoding:NSUTF8StringEncoding] error:&error]] : nil;
+    NSMutableDictionary* dicData = (strDataJson && strDataJson.length > 0)  ? [NSMutableDictionary dictionaryWithDictionary:[[CJSONDeserializer deserializer] deserialize:[strDataJson dataUsingEncoding:NSUTF8StringEncoding] error:&error]] : nil;
     if(error)
     {
         NSLog(@"JxbDataMgr deserializer error:%@",error);
-        if(_block != NULL)
-            _block([NSNumber numberWithBool:NO]);
+        [self useBlock:[NSNumber numberWithBool:NO]];
+        return;
     }
     if (!dicData)
-        if(_block != NULL)
-            _block([NSNumber numberWithBool:YES]);
+    {
+        [self useBlock:[NSNumber numberWithBool:YES]];
+        return;
+    }
     [dicData removeObjectForKey:_primaryValue];
     error = nil;
     NSData* jsonData = [[CJSONSerializer serializer] serializeObject:dicData error:&error];
     if(error)
     {
         NSLog(@"JxbDataMgr serializer error:%@",error);
-        if(_block != NULL)
-            _block([NSNumber numberWithBool:NO]);
+        [self useBlock:[NSNumber numberWithBool:NO]];
+        return;
     }
     NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
     if(!dicTables)
@@ -241,20 +252,26 @@ static Class rClass;
     [dicTables setObject:jsonString forKey:_tableName];
     [USERDEFAULT setObject:dicTables forKey:dbName];
     [USERDEFAULT synchronize];
-    if(_block != NULL)
-        _block([NSNumber numberWithBool:YES]);
+    [self useBlock:[NSNumber numberWithBool:YES]];
 }
 
 /**
  *  清空数据
  */
 - (void)_dropData {
-    NSMutableDictionary* dicTables = [USERDEFAULT objectForKey:dbName];
+    NSMutableDictionary* dicTables = [[USERDEFAULT objectForKey:dbName] mutableCopy];
     [dicTables setObject:@"" forKey:_tableName];
     [USERDEFAULT setObject:dicTables forKey:dbName];
     [USERDEFAULT synchronize];
-    if(_block != NULL)
-        _block([NSNumber numberWithBool:YES]);
+    [self useBlock:[NSNumber numberWithBool:YES]];
+}
+
+
+- (void)useBlock:(NSObject*)obj {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if(_block != NULL)
+            _block(obj);
+    });
 }
 @end
 
@@ -294,7 +311,7 @@ static Class rClass;
  *
  *  @return
  */
-- (void)queryData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(id)block {
+- (void)queryData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(JxbDataOpBlock)block {
     JxbDataMgrOperation* op = [[JxbDataMgrOperation alloc] init];
     op.opType = JxbDataOpType_Query;
     op.tableName = tableName;
@@ -310,7 +327,7 @@ static Class rClass;
  *  @param conditions 条件（JxbQueryCondition的数组）
  *  @param block      回调
  */
-- (void)queryDataExt:(NSString*)tableName conditions:(NSArray*)conditions block:(id)block {
+- (void)queryDataExt:(NSString*)tableName conditions:(NSArray*)conditions block:(JxbDataOpBlock)block {
     JxbDataMgrOperation* op = [[JxbDataMgrOperation alloc] init];
     op.opType = JxbDataOpType_QueryExt;
     op.tableName = tableName;
@@ -328,7 +345,7 @@ static Class rClass;
  *
  *  @return
  */
-- (void)insertOrUpdateData:(NSString*)tableName PrimaryKey:(NSString*)primaryKey arrItems:(NSArray*)arrItems block:(id)block {
+- (void)insertOrUpdateData:(NSString*)tableName PrimaryKey:(NSString*)primaryKey arrItems:(NSArray*)arrItems block:(JxbDataOpBlock)block {
     JxbDataMgrOperation* op = [[JxbDataMgrOperation alloc] init];
     op.opType = JxbDataOpType_InsertUpdate;
     op.tableName = tableName;
@@ -346,7 +363,7 @@ static Class rClass;
  *
  *  @return
  */
-- (void)deleteData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(id)block {
+- (void)deleteData:(NSString*)tableName PrimaryValue:(NSString*)PrimaryValue block:(JxbDataOpBlock)block {
     JxbDataMgrOperation* op = [[JxbDataMgrOperation alloc] init];
     op.opType = JxbDataOpType_Delete;
     op.tableName = tableName;
@@ -362,7 +379,7 @@ static Class rClass;
  *
  *  @return
  */
-- (void)dropData:(NSString*)tableName block:(id)block {
+- (void)dropData:(NSString*)tableName block:(JxbDataOpBlock)block {
     JxbDataMgrOperation* op = [[JxbDataMgrOperation alloc] init];
     op.opType = JxbDataOpType_Drop;
     op.tableName = tableName;
