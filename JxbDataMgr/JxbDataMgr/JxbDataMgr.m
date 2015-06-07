@@ -103,7 +103,7 @@ static Class rClass;
         [self useBlock:nil];
         return;
     }
-    if (!dicData)
+    if (!dicData || dicData.count == 0)
     {
         [self useBlock:nil];
         return;
@@ -111,6 +111,11 @@ static Class rClass;
     if (_primaryValue && _primaryValue.length > 0)
     {
         dicData = [dicData objectForKey:_primaryValue];
+        if(!dicData)
+        {
+            [self useBlock:nil];
+            return;
+        }
         [self useBlock:@{@"result":dicData}];
         return;
     }
